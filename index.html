@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>中１理科クイズ：解明し編</title>
+    <style>
+        body {
+            background-color: #080808;
+            color: #dcdcdc;
+            font-family: 'MS Mincho', 'Times New Roman', serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        /* 画面揺れ（赤転換）のアニメーション */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .shake-effect {
+            animation: shake 0.5s;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8) !important;
+            border-color: #ff0000 !important;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 500px;
+            background: #141414;
+            border: 2px solid #444;
+            position: relative;
+            box-shadow: 0 0 25px rgba(150, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 25px;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        #header-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #7f8c8d;
+            letter-spacing: 2px;
+            border-bottom: 1px dashed #444;
+            padding-bottom: 10px;
+        }
+
+        .status-val {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        #main-display {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        #speaker {
+            font-size: 18px;
+            color: #ff3333;
+            margin-bottom: 10px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #question-text {
+            font-size: 17px;
+            line-height: 1.6;
+            letter-spacing: 1px;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        #choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .choice-btn {
+            background: rgba(15, 15, 20, 0.9);
+            color: #e0e0e0;
+            border: 1px solid #770000;
+            padding: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .choice-btn:hover {
+            background: rgba(130, 0, 0, 0.6);
+            color: #fff;
+            border-color: #ff3333;
+        }
+
+        .choice-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #333;
+            background: #111;
+        }
+
+        #action-bar {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: #222;
+            color: #fff;
+            border: 1px solid #888;
+            padding: 10px 20px;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #444;
+        }
+
+        #hint-btn {
+            border-color: #7b5294;
+            color: #d1b3ff;
+            background: rgba(40, 20, 50, 0.8);
+        }
+
+        #hint-btn:hover {
+            background: rgba(80, 40, 100, 0.9);
+        }
+
+        #next-btn {
+            display: none;
+            flex-grow: 1;
+            background: #400;
+            border-color: #ff3333;
+        }
+
+        #next-btn:hover {
+            background: #800;
+        }
+
+        /* スタート画面 */
+        #start-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #start-btn {
+            background: #400;
+            color: #fff;
+            border: 2px solid #ff3333;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: 0.2s;
+        }
+
+        #start-btn:hover {
+            background: #800;
+        }
+
+        /* オープニング動画用スタイル */
+        #intro-video {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 20;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- スタート画面 -->
+        <div id="start-screen">
+            <h2 style="color: #ff3333; letter-spacing: 4px; margin-bottom: 10px;">中１理科クイズ：解明し編</h2>
+            <p style="color: #bbb; margin-bottom: 25px; letter-spacing: 2px; font-size: 14px;">※音量にご注意ください。BGMが再生されます。</p>
+            <button id="start-btn" onclick="startIntroVideo()">ゲームを始める</button>
+
+            <!-- オープニング動画（preload追加、playsinline指定） -->
+            <video id="intro-video" preload="auto" playsinline>
+                <source src="op.mp4" type="video/mp4">
+                お使いのブラウザは動画再生に対応していません。
+            </video>
+        </div>
+
+        <!-- ヘッダー情報 -->
+        <div id="header-info">
+            <div id="atmosphere">昭和58年初夏……雛見沢村。</div>
+            <div>世界線：第<span id="loop-count" class="status-val">1</span>カケラ</div>
+            <div>L5発症度：<span id="l5-meter" class="status-val">0%</span></div>
+        </div>
+
+        <!-- メイン表示領域 -->
+        <div id="main-display">
+            <div id="speaker"></div>
+            <div id="question-text"></div>
+        </div>
+
+        <!-- 選択肢 -->
+        <div id="choices-container"></div>
+
+        <!-- アクションバー（ヒント＆進むボタン） -->
+        <div id="action-bar">
+            <button id="hint-btn" class="action-btn" onclick="useHanyuHint()">羽入の助言を使う（残り1回）</button>
+            <button id="next-btn" class="action-btn" onclick="nextStep()">次へ進む</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 音声・映像ファイル設定 ---
+        const bgm = new Audio('bgm.mp3');
+        bgm.loop = true;
+        bgm.volume = 0.5;
+
+        const clickSound = new Audio('click.mp3');
+        clickSound.volume = 0.3;
+
+        const introVideo = document.getElementById("intro-video");
+
+        // --- ゲーム状態変数 ---
+        let currentQuestionIndex = 0;
+        let loopCount = 1;
+        let l5Level = 0; // 発症度 (%)
+        let hintAvailable = true;
+
+        // 全10問：中1理科の各分野（植物・物質・光/音/力・地学）
+        const quizData = [
+            {
+                speaker: "レナ",
+                text: "ねぇ圭一君……。理科の実験で、物質を加熱して発生した気体を水上置換法で集めるとき、一番最初に出てくる気体はどうして集めちゃいけないんだっけ…？",
+                choices: [
+                    { text: "最初に出てくる気体は試験管内の空気が混ざっているから", correct: true, explanation: "正解……。試験管の中に残っていた空気が混ざるから、最初は捨てなきゃいけないんだよ……かな？" },
+                    { text: "最初に出てくる気体は毒性が強すぎるから", correct: false, explanation: "不正解……。そんな危険な気体が最初から出るわけじゃないよ、圭一君……嘘だ！！" },
+                    { text: "最初に出てくる気体はすぐに冷えて液体に戻ってしまうから", correct: false, explanation: "不正解……。気体が冷えるからじゃないよ……圭一君、何か隠してる？" }
+                ]
+            },
+            {
+                speaker: "魅音",
+                text: "おっ、じゃあ次の問題だ！ 質量パーセント濃度が 15% の食塩水 200g に含まれている、溶質の食塩の重さは何gになるかな？ 部活の罰ゲームがかかってるから本気で行くよ！",
+                choices: [
+                    { text: "15g", correct: false, explanation: "不正解！ 200 × 0.15 は……計算ミスだよ、おじさん許しちゃうぞ〜？" },
+                    { text: "30g", correct: true, explanation: "正解！ 200g × 0.15 = 30g だね。さすが部活メンバー、よく分かってるじゃないか！" },
+                    { text: "45g", correct: false, explanation: "不正解！ そんなに多くないよ、もう一回計算し直してよねっ！" }
+                ]
+            },
+            {
+                speaker: "沙都子",
+                text: "わたくしからの問題ですわ、圭一さん！ マツやスギのような、子房がなく胚珠がむき出しになっている植物を何と呼びますの？ 間違えたらトラップにかかっていただきますわ！",
+                choices: [
+                    { text: "被子植物", correct: false, explanation: "不正解ですわ！ 被子植物は子房で包まれている方ですのよ！ トラップ発動ですわ！" },
+                    { text: "裸子植物", correct: true, explanation: "正解ですわ！ 胚珠が「むき出し（裸）」だから裸子植物……見事回避されましたわね。" },
+                    { text: "コケ植物", correct: false, explanation: "不正解ですわ！ コケは種子をつくらない植物ですのよ、勉強不足ですわね！" }
+                ]
+            },
+            {
+                speaker: "梨花",
+                text: "みぃ〜。ではボクからの問題なのです。水の状態変化についての質問なのです。氷が水に変化するとき、質量と体積はそれぞれどうなるのですか？ 答えなさいなのです。",
+                choices: [
+                    { text: "質量は変わり、体積は小さくなるのです", correct: false, explanation: "はずれなのですよ。質量は変わらないのに、どうして変えちゃうのですか……？" },
+                    { text: "質量は小さくなり、体積は大きくなるのです", correct: false, explanation: "ぶー、みな殺し……じゃなくて不正解なのです。質量が軽くなるわけないのですよ。" },
+                    { text: "質量は変わらず、体積は小さくなるのです", correct: true, explanation: "正解なのです。氷が水になるとき、隙間の多い結晶構造が崩れて体積は小さくなるのですよ。よくできましたなのです。" }
+                ]
+            },
+            {
+                speaker: "詩音",
+                text: "フフッ、私からも1問いいでしょうか？ 音の性質についてです。音の大きさと音の高さは、振動の何によって決まるか覚えていますか？ 魅音と間違えないで答えてくださいね？",
+                choices: [
+                    { text: "大きさは「振幅」、高さは「振動数」で決まる", correct: true, explanation: "正解です。揺れ幅が大きいと大きな音、1秒間の振動数が多いと高い音になります。正解できて命拾いしましたね……。" },
+                    { text: "大きさは「振動数」、高さは「振幅」で決まる", correct: false, explanation: "不正解です。逆ですよ、逆。……そんな簡単なことも分からないんですか？" },
+                    { text: "大きさも高さも「波長」だけで決まる", correct: false, explanation: "不正解です。いい加減な答えを言うと、爪を剥がしたくなりますね……。" }
+                ]
+            },
+            {
+                speaker: "鷹野",
+                text: "あら、研究の邪魔をしないでちょうだい。……でもせっかくだわ。マグマが地表近くで急激に冷えて固まった岩石（火山岩）の組織を何と呼ぶか知っているかしら？",
+                choices: [
+                    { text: "等粒状組織", correct: false, explanation: "あら、残念。等粒状組織は地下深くでゆっくり冷えて固まった「深成岩」の特徴よ。" },
+                    { text: "斑状組織", correct: true, explanation: "うふふ、正解よ。急激に冷えることで、大きな鉱物（斑晶）と細かい部分（石英・ガラス質の石脈）ができるの。スクラップにするには惜しい知性ね。" },
+                    { text: "柱状節理", correct: false, explanation: "ちがうわ。それは岩石の割れ方の構造のことよ。私の研究資料を読み直しなさい。" }
+                ]
+            },
+            {
+                speaker: "富竹",
+                text: "やあ圭一君！ 光が空気中から水の中に進むとき、入射角と屈折角の大きさの関係はどうなるか分かるかい？ フラッシュを切って答えてくれ！",
+                choices: [
+                    { text: "入射角 ＜ 屈折角（屈折角の方が大きくなる）", correct: false, explanation: "残念、違うよ！ 水の中に入るときは光が屈折して、屈折角の方が「小さく」なるんだ。" },
+                    { text: "入射角 ＞ 屈折角（入射角の方が大きくなる）", correct: true, explanation: "大正解！ 空気に比べて水の方が光が進みにくいから、屈折角は小さくなるんだね。素晴らしいシャッターチャンスだ！" },
+                    { text: "常に 入射角 ＝ 屈折角 になる", correct: false, explanation: "それは反射のときだね！ 屈折するときは角度が変わるんだよ。僕の写真をあげるから出直しておいで！" }
+                ]
+            },
+            {
+                speaker: "知恵先生",
+                text: "みなさん、カレーの時間……ではなく理科の時間ですよ！ 顕微鏡で観察するとき、倍率を高く（低倍率から高倍率へ）変更すると、視野の明るさと広さはどう変化しますか？",
+                choices: [
+                    { text: "視野は「暗く」なり、「狭く」なる", correct: true, explanation: "大変よくできました！ 高倍率にすると光が入る範囲が狭まるため暗くなり、見える範囲も狭くなるのです。カレーの煮込み具合と同じくらい重要ですよ！" },
+                    { text: "視野は「明るく」なり、「広く」なる", correct: false, explanation: "違います！ 倍率を上げるとズームされるので、広く見えたり明るくなったりはしません！" },
+                    { text: "視野は「暗く」なるが、「広く」なる", correct: false, explanation: "惜しいですが違います！ ズームしているのに広く見えるはずがありませんよね？" }
+                ]
+            },
+            {
+                speaker: "羽入",
+                text: "あうあう！ ボクからの問題なのです！ 地震のときに最初に伝わってくる、カタカタという小さな揺れ（初期微震）を起こす波のことを何波と呼ぶのですか……？",
+                choices: [
+                    { text: "S波", correct: false, explanation: "あうあうー！ S波は後から来る大きな揺れ（主要震）を起こす波なのです……！" },
+                    { text: "P波", correct: true, explanation: "正解なのです！ 伝わるのが早い「Primary wave（P波）」が最初に届くのです！ あうあう、圭一はすごいです！" },
+                    { text: "T波", correct: false, explanation: "あうあう……T波なんて地震の波はないのです……僕を困らせないでほしいのです……。" }
+                ]
+            },
+            {
+                speaker: "？？？",
+                text: "……最後の問いだ。100gの物体にはたらく重力の大きさを1Nとするとき、地球上で質量60kgの人にはたらく重力は何Nになる……？",
+                choices: [
+                    { text: "60N", correct: false, explanation: "愚かな……。60kgは60000gだ。100gで1Nなら、600Nにしかならん。計算をやり直すがいい……！" },
+                    { text: "600N", correct: true, explanation: "見事だ……。60kg＝60000g。100gが1Nゆえに 600N。お前は運命の破滅を打ち破り、真実へ辿り着いたのだ……！" },
+                    { text: "6000N", correct: false, explanation: "桁が違うぞ……！ 焦りがお前の目を曇らせたようだな。世界は再び惨劇へ逆戻りだ……。" }
+                ]
+            }
+        ];
+
+        // UI要素
+        const gameContainer = document.getElementById("game-container");
+        const speakerEl = document.getElementById("speaker");
+        const questionTextEl = document.getElementById("question-text");
+        const choicesContainerEl = document.getElementById("choices-container");
+        const nextBtnEl = document.getElementById("next-btn");
+        const hintBtnEl = document.getElementById("hint-btn");
+        const loopCountEl = document.getElementById("loop-count");
+        const l5MeterEl = document.getElementById("l5-meter");
+
+        // ボタン押下時にオープニング動画を開始する処理
+        function startIntroVideo() {
+            playClickSound();
+
+            // 動画を表示して位置を最初に戻す
+            introVideo.style.display = "block";
+            introVideo.currentTime = 0;
+
+            // 動画の読み込みを促す
+            introVideo.load();
+
+            // 再生イベント（ユーザーのボタンクリック直後なので音声付きで再生許可されやすい）
+            const playPromise = introVideo.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // 正常に再生開始された場合
+                }).catch(error => {
+                    console.log("動画再生失敗（ブラウザ制限またはファイルエラー）:", error);
+                    // 動画が再生できない場合はそのままゲームを開始
+                    introVideo.style.display = "none";
+                    startGame();
+                });
+            }
+
+            // 動画再生が終了したらゲームを開始する
+            introVideo.onended = function() {
+                introVideo.style.display = "none";
+                startGame();
+            };
+        }
+
+        // ゲーム本編開始処理
+        function startGame() {
+            bgm.play().catch(e => console.log("Audio block", e));
+            document.getElementById("start-screen").style.display = "none";
+            loadQuestion();
+        }
+
+        function playClickSound() {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => {});
+        }
+
+        function loadQuestion() {
+            nextBtnEl.style.display = "none";
+            choicesContainerEl.innerHTML = "";
+            hintBtnEl.style.display = hintAvailable ? "block" : "none";
+
+            // 全問クリア判定
+            if (currentQuestionIndex >= quizData.length) {
+                speakerEl.innerText = "―― 雛見沢の夜明け ――";
+                questionTextEl.innerText = "すべての理科の謎を解き明かした……！\nあなたは仲間たちと共に、絶対の惨劇を回避したのだ。\n\n【真・解明END：理想の世界へ】\n到達ループ数：" + loopCount + " 回 / 最終発症度：" + l5Level + "%";
+                hintBtnEl.style.display = "none";
+                return;
+            }
+
+            let currentQ = quizData[currentQuestionIndex];
+            speakerEl.innerText = `【第 ${currentQuestionIndex + 1} 問】 ` + currentQ.speaker;
+            questionTextEl.innerText = currentQ.text;
+
+            currentQ.choices.forEach((choice, index) => {
+                let btn = document.createElement("button");
+                btn.className = "choice-btn";
+                btn.id = "choice-" + index;
+                btn.innerText = choice.text;
+                btn.onclick = () => {
+                    playClickSound();
+                    selectAnswer(choice);
+                };
+                choicesContainerEl.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(choice) {
+            choicesContainerEl.innerHTML = "";
+            hintBtnEl.style.display = "none";
+
+            if (choice.correct) {
+                speakerEl.innerText = "【正解】";
+                questionTextEl.innerText = choice.explanation;
+                nextBtnEl.innerText = "次のカケラへ進む";
+                nextBtnEl.style.display = "block";
+                currentQuestionIndex++;
+            } else {
+                // 不正解時の画面揺れ・赤フラッシュ
+                triggerL5Effect();
+
+                l5Level += 25;
+                if(l5Level > 100) l5Level = 100;
+                l5MeterEl.innerText = l5Level + "%";
+
+                speakerEl.innerText = "【惨劇発生：L5発症】";
+                questionTextEl.innerText = choice.explanation + "\n\n――あなたは選択を誤った。喉を掻きむしる衝動が抑えられない……！\n【バッドエンド：世界のリセット】";
+                
+                nextBtnEl.innerText = "最初からやり直す（ループする）";
+                nextBtnEl.style.display = "block";
+                
+                // カウントリセット
+                currentQuestionIndex = 0;
+                loopCount++;
+                loopCountEl.innerText = loopCount;
+                
+                // 復帰時にヒント権も復活
+                hintAvailable = true;
+                hintBtnEl.innerText = "羽入の助言を使う（残り1回）";
+            }
+        }
+
+        function triggerL5Effect() {
+            gameContainer.classList.add("shake-effect");
+            setTimeout(() => {
+                gameContainer.classList.remove("shake-effect");
+            }, 500);
+        }
+
+        function useHanyuHint() {
+            if (!hintAvailable) return;
+
+            playClickSound();
+            let currentQ = quizData[currentQuestionIndex];
+            let wrongButtons = [];
+
+            currentQ.choices.forEach((choice, idx) => {
+                if (!choice.correct) {
+                    let btn = document.getElementById("choice-" + idx);
+                    if (btn && !btn.disabled) wrongButtons.push(btn);
+                }
+            });
+
+            if (wrongButtons.length > 0) {
+                let targetBtn = wrongButtons[Math.floor(Math.random() * wrongButtons.length)];
+                targetBtn.disabled = true;
+                targetBtn.innerText = "【あうあう…これは違うのです】";
+                
+                hintAvailable = false;
+                hintBtnEl.innerText = "羽入の助言（使用済み）";
+                hintBtnEl.style.opacity = "0.5";
+            }
+        }
+
+        function nextStep() {
+            playClickSound();
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>
